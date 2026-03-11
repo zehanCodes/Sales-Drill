@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Drill — Objection Reps</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --smoke: #f5c542;
+    --objection: #ff4d6a;
+    --green: #4ade80;
+    --yellow: #facc15;
+    --red: #f87171;
+    --text: #e8e8e8;
+    --muted: #555;
+    --border: #1e1e1e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+    user-select: none;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* HEADER */
+  .header {
+    padding: 24px 36px 0;
+    width: 100%;
+    max-width: 920px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .stats-bar {
+    display: flex;
+    gap: 22px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .stat-num {
+    color: var(--text);
+    font-weight: 700;
+    font-size: 16px;
+    display: block;
+    margin-top: 2px;
+  }
+
+  /* MODE BAR */
+  .mode-bar {
+    width: 100%;
+    max-width: 920px;
+    padding: 18px 36px 0;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .mode-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 7px 18px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+
+  .mode-btn:hover { border-color: #333; color: #999; }
+  .mode-btn.active-all { border-color: var(--text); color: var(--text); background: rgba(255,255,255,0.06); }
+  .mode-btn.active-smoke { border-color: var(--smoke); color: var(--smoke); background: rgba(245,197,66,0.1); }
+  .mode-btn.active-obj { border-color: var(--objection); color: var(--objection); background: rgba(255,77,106,0.1); }
+
+  /* ARENA */
+  .arena {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 920px;
+    padding: 0 36px;
+    position: relative;
+  }
+
+  .prompt-zone { text-align: center; width: 100%; }
+
+  .type-badge {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 5px 16px;
+    border-radius: 100px;
+    margin-bottom: 20px;
+    font-weight: 700;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+  }
+
+  .type-badge.visible { opacity: 1; transform: translateY(0); }
+  .type-badge.smokescreen { background: rgba(245,197,66,0.1); color: var(--smoke); border: 1px solid rgba(245,197,66,0.2); }
+  .type-badge.objection { background: rgba(255,77,106,0.1); color: var(--objection); border: 1px solid rgba(255,77,106,0.2); }
+
+  .prompt-text {
+    font-size: clamp(26px, 4.5vw, 38px);
+    font-weight: 700;
+    line-height: 1.3;
+    max-width: 680px;
+    margin: 0 auto;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    opacity: 0;
+    transform: scale(0.96);
+    transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .prompt-text.visible { opacity: 1; transform: scale(1); }
+
+  /* LISTENING STATE */
+  .listen-zone {
+    margin-top: 24px;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+  }
+
+  .listen-zone.visible { opacity: 1; transform: translateY(0); }
+
+  .listen-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 8px 18px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    background: rgba(255,255,255,0.02);
+    margin-bottom: 14px;
+  }
+
+  .listen-indicator.listening { border-color: var(--red); color: var(--red); }
+  .listen-indicator.listening .mic-dot { background: var(--red); animation: micPulse 0.8s ease-in-out infinite alternate; }
+  .listen-indicator.processing { border-color: var(--yellow); color: var(--yellow); }
+
+  .mic-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+
+  @keyframes micPulse {
+    0% { opacity: 0.4; transform: scale(0.8); }
+    100% { opacity: 1; transform: scale(1.3); }
+  }
+
+  .transcript-text {
+    font-size: 15px;
+    color: #777;
+    font-style: italic;
+    max-width: 580px;
+    margin: 0 auto;
+    min-height: 24px;
+    line-height: 1.5;
+  }
+
+  /* GRADE DISPLAY */
+  .grade-zone {
+    margin-top: 20px;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+    transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .grade-zone.visible { opacity: 1; transform: translateY(0) scale(1); }
+
+  .grade-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 10px 24px;
+    border-radius: 100px;
+    margin-bottom: 10px;
+  }
+
+  .grade-badge.nailed { background: rgba(74,222,128,0.12); color: var(--green); border: 1px solid rgba(74,222,128,0.25); }
+  .grade-badge.partial { background: rgba(250,204,21,0.12); color: var(--yellow); border: 1px solid rgba(250,204,21,0.25); }
+  .grade-badge.missed { background: rgba(248,113,113,0.12); color: var(--red); border: 1px solid rgba(248,113,113,0.25); }
+
+  .grade-detail {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: #666;
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .grade-detail .hit { color: var(--green); }
+  .grade-detail .miss { color: #444; text-decoration: line-through; }
+
+  /* HINT */
+  .hint-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: #888;
+    margin-top: 16px;
+    padding: 12px 20px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.4s ease 0.1s;
+    max-width: 580px;
+    line-height: 1.7;
+    text-align: left;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hint-text.visible { opacity: 1; transform: translateY(0); }
+
+  .hint-label {
+    color: #555;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-size: 9px;
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  /* IDLE */
+  .idle-state { text-align: center; }
+
+  .idle-big {
+    font-size: clamp(34px, 6vw, 52px);
+    font-weight: 900;
+    letter-spacing: -1px;
+    color: #181818;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .idle-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: #2a2a2a;
+  }
+
+  /* BOTTOM */
+  .bottom-bar {
+    width: 100%;
+    max-width: 920px;
+    padding: 0 36px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .spacebar-cta {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .key-icon {
+    padding: 4px 12px;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    background: #141414;
+    font-size: 10px;
+    color: #777;
+    box-shadow: 0 2px 0 #1a1a1a;
+  }
+
+  .bottom-controls {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .ctrl-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  .ctrl-btn:hover { border-color: #333; color: #999; }
+  .ctrl-btn.active { border-color: #444; color: var(--text); background: rgba(255,255,255,0.04); }
+  .ctrl-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+  /* FLASH */
+  .flash-ring {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 0; height: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  .flash-ring.fire { animation: ringFlash 0.5s ease-out forwards; }
+  .flash-ring.smoke-flash { background: radial-gradient(circle, rgba(245,197,66,0.06) 0%, transparent 70%); }
+  .flash-ring.obj-flash { background: radial-gradient(circle, rgba(255,77,106,0.06) 0%, transparent 70%); }
+
+  @keyframes ringFlash {
+    0% { width: 0; height: 0; opacity: 1; }
+    100% { width: 120vmax; height: 120vmax; opacity: 0; }
+  }
+
+  .streak-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--smoke), var(--objection));
+    transition: width 0.4s ease;
+    z-index: 50;
+  }
+
+  /* SESSION SUMMARY OVERLAY */
+  .summary-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+  }
+
+  .summary-overlay.visible { display: flex; }
+
+  .summary-card {
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 16px;
+    padding: 36px 40px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .summary-title {
+    font-size: 24px;
+    font-weight: 900;
+    margin-bottom: 4px;
+  }
+
+  .summary-subtitle {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .summary-stat {
+    text-align: center;
+    padding: 16px 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+  }
+
+  .summary-stat-num {
+    font-size: 28px;
+    font-weight: 900;
+    display: block;
+  }
+
+  .summary-stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  .summary-section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .summary-drill-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+
+  .summary-drill-row .drill-name { flex: 1; }
+
+  .summary-drill-row .drill-score {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 100px;
+  }
+
+  .score-nailed { color: var(--green); background: rgba(74,222,128,0.1); }
+  .score-partial { color: var(--yellow); background: rgba(250,204,21,0.1); }
+  .score-missed { color: var(--red); background: rgba(248,113,113,0.1); }
+
+  .summary-weak {
+    margin-top: 20px;
+    padding: 14px 18px;
+    border: 1px solid rgba(248,113,113,0.2);
+    border-radius: 10px;
+    background: rgba(248,113,113,0.04);
+  }
+
+  .summary-weak-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 8px;
+  }
+
+  .summary-weak-item {
+    font-size: 13px;
+    color: #aaa;
+    padding: 4px 0;
+  }
+
+  .summary-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 28px;
+  }
+
+  .summary-btn {
+    flex: 1;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .summary-btn:hover { background: rgba(255,255,255,0.05); }
+  .summary-btn.primary { background: rgba(255,255,255,0.08); border-color: #444; }
+
+  /* Chrome warning */
+  .chrome-note {
+    position: fixed;
+    bottom: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    background: #141414;
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    border-radius: 8px;
+    z-index: 150;
+    display: none;
+    text-align: center;
+  }
+
+  .chrome-note.visible { display: block; }
+</style>
+</head>
+<body>
+
+<div class="streak-bar" id="streakBar"></div>
+<div class="flash-ring" id="flashRing"></div>
+
+<div class="header">
+  <div class="logo">Sales Drill</div>
+  <div class="stats-bar">
+    <div>Reps<span class="stat-num" id="totalCount">0</span></div>
+    <div style="color:var(--smoke)">Smoke<span class="stat-num" id="smokeCount">0</span></div>
+    <div style="color:var(--objection)">Obj<span class="stat-num" id="objCount">0</span></div>
+    <div style="color:var(--green)">Nailed<span class="stat-num" id="nailedCount">0</span></div>
+  </div>
+</div>
+
+<div class="mode-bar">
+  <button class="mode-btn active-all" data-mode="all">Mixed</button>
+  <button class="mode-btn" data-mode="smokescreen">Smokescreens</button>
+  <button class="mode-btn" data-mode="objection">Objections</button>
+</div>
+
+<div class="arena">
+  <div class="prompt-zone">
+    <div class="idle-state" id="idleState">
+      <div class="idle-big">Hit Space</div>
+      <div class="idle-sub">Respond out loud — we'll grade you</div>
+    </div>
+    <div id="activeState" style="display:none;">
+      <div class="type-badge" id="typeBadge"></div>
+      <div class="prompt-text" id="promptText"></div>
+
+      <div class="listen-zone" id="listenZone">
+        <div class="listen-indicator" id="listenIndicator">
+          <div class="mic-dot"></div>
+          <span id="listenLabel">Listening...</span>
+        </div>
+        <div class="transcript-text" id="transcriptText"></div>
+      </div>
+
+      <div class="grade-zone" id="gradeZone">
+        <div class="grade-badge" id="gradeBadge"></div>
+        <div class="grade-detail" id="gradeDetail"></div>
+      </div>
+
+      <div class="hint-text" id="hintText">
+        <span class="hint-label">Suggested Response</span>
+        <span id="hintContent"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <div class="spacebar-cta">
+    <span class="key-icon">SPACE</span> Next drill
+  </div>
+  <div class="bottom-controls">
+    <button class="ctrl-btn active" id="toggleMic">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+      <span>Mic On</span>
+    </button>
+    <button class="ctrl-btn" id="toggleVoice">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+      <span>Voice Off</span>
+    </button>
+    <button class="ctrl-btn" id="toggleHints">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      <span>Hints Off</span>
+    </button>
+    <button class="ctrl-btn" id="endSession">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+      <span>End Session</span>
+    </button>
+  </div>
+</div>
+
+<div class="chrome-note" id="chromeNote">Speech recognition works best in Chrome. Other browsers may not support it.</div>
+
+<!-- SESSION SUMMARY -->
+<div class="summary-overlay" id="summaryOverlay">
+  <div class="summary-card">
+    <div class="summary-title">Session Complete</div>
+    <div class="summary-subtitle" id="summarySubtitle"></div>
+
+    <div class="summary-grid">
+      <div class="summary-stat">
+        <span class="summary-stat-num" id="sumTotal">0</span>
+        <span class="summary-stat-label">Total Reps</span>
+      </div>
+      <div class="summary-stat">
+        <span class="summary-stat-num" style="color:var(--green)" id="sumNailed">0</span>
+        <span class="summary-stat-label">Nailed</span>
+      </div>
+      <div class="summary-stat">
+        <span class="summary-stat-num" style="color:var(--yellow)" id="sumAccuracy">0%</span>
+        <span class="summary-stat-label">Accuracy</span>
+      </div>
+    </div>
+
+    <div class="summary-section-title">All Drills</div>
+    <div id="summaryDrillList"></div>
+
+    <div class="summary-weak" id="summaryWeak" style="display:none;">
+      <div class="summary-weak-title">Focus Next Session</div>
+      <div id="summaryWeakList"></div>
+    </div>
+
+    <div class="summary-actions">
+      <button class="summary-btn" id="closeSummary">Close</button>
+      <button class="summary-btn primary" id="restartSession">New Session</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ───
+const drills = [
+  // SMOKESCREENS
+  {
+    type: "smokescreen", text: "I'm busy.",
+    keywords: ["quick", "fast", "won't take long", "super quick", "30 seconds", "brief", "second", "minute"],
+    hint: "\"Don't worry I'll be super quick with you.\" Then continue your pitch."
+  },
+  {
+    type: "smokescreen", text: "Do you have a card?",
+    keywords: ["walking card", "actually the card", "that's why I'm out here", "why i'm here", "walking"],
+    hint: "\"I'm actually the walking card today!\" (Big smile). Or: \"Yeah totally, that's actually why I'm out here.\""
+  },
+  {
+    type: "smokescreen", text: "I just do it myself.",
+    keywords: ["crazy not to", "what have you been", "treating for", "spraying for", "what bugs", "what are you"],
+    hint: "\"Yeah you'd be crazy not to — what have you been treating for?\" Find their hot button."
+  },
+  {
+    type: "smokescreen", text: "We already have a service.",
+    keywords: ["who do you use", "who are you using", "how are they", "how have they", "familiar with", "still seeing", "what are you seeing"],
+    hint: "\"Oh perfect, who are you using?\" Transition to switchover — find what they're still seeing."
+  },
+  {
+    type: "smokescreen", text: "I'm not interested.",
+    keywords: ["not the solar", "solar guy", "do you have a guy", "do it yourself", "don't worry", "no worries"],
+    hint: "Before they know what you do: \"Don't worry, I'm not the solar guy!\" After: \"Do you have a guy or do it yourself?\""
+  },
+  {
+    type: "smokescreen", text: "We're not seeing any bugs.",
+    keywords: ["inside", "outside", "mainly focus", "early in the season", "not on the inside", "outside is where", "prevention"],
+    hint: "\"Yeah not too much on the inside — I'm mainly focusing on the outside.\""
+  },
+  {
+    type: "smokescreen", text: "I'm renting.",
+    keywords: ["renters", "landlord", "landlords don't", "your problem", "most landlords", "don't cover", "tenants"],
+    hint: "\"Yeah a lot of renters in here use me — most landlords don't cover pest control.\""
+  },
+  {
+    type: "smokescreen", text: "You're the third person to stop by.",
+    keywords: ["didn't go with", "neither did", "anyone else", "bugs have been bad", "getting bad", "really bad", "that's because"],
+    hint: "\"You didn't go with any of them right? Neither did anyone else.\""
+  },
+
+  // OBJECTIONS
+  {
+    type: "objection", text: "I just want a one-time treatment.",
+    keywords: ["never do a one", "few treatments", "long-term", "service agreement", "warranty", "24 months", "gonna be in the house", "agreement"],
+    hint: "\"I'd never do a one-time treatment to you — I need a few to make a long-term difference. I just ask for 24 months.\""
+  },
+  {
+    type: "objection", text: "Do you have a card? I'll call you back.",
+    keywords: ["not the card guy", "earning business", "in the neighborhood", "biggest thing holding", "holding you back", "shot at your business"],
+    hint: "\"I'm not the card guy — I'm here earning business in the neighborhood. What's the biggest thing holding you back?\""
+  },
+  {
+    type: "objection", text: "I need to talk to my spouse first.",
+    keywords: ["is she here", "when does she get back", "doesn't like", "best service", "good price", "no-brainer", "make that call", "bet she", "bet he"],
+    hint: "\"Is she here? I bet she doesn't like the [bug] either. If I gave you a no-brainer could you make that call?\""
+  },
+  {
+    type: "objection", text: "I need to think about it.",
+    keywords: ["no-brainer", "my bad", "price or the service", "on the fence", "biggest thing", "think about", "what's got you"],
+    hint: "\"Oh I thought it was a no-brainer — is it more of the price or the service that's got you on the fence?\""
+  },
+  {
+    type: "objection", text: "I don't want a winter treatment.",
+    keywords: ["less in winter", "built-up protection", "square one", "start over", "don't have to start", "go away", "protection", "process"],
+    hint: "\"That's why I come out a little less in winter — I wouldn't want all the built-up protection to go away.\""
+  },
+  {
+    type: "objection", text: "I don't want to be locked into a contract.",
+    keywords: ["not a magic pill", "greater reduction", "each treatment", "try me out", "24 months", "gonna be in the house", "years", "customers stay"],
+    hint: "\"Pest control isn't a magic pill — each treatment builds. I just ask you to try me out for 24 months. You're gonna be in the house that long?\""
+  },
+];
+
+// ─── STATE ───
+let totalReps = 0, smokeCt = 0, objCt = 0, nailedCt = 0;
+let showHints = false, voiceOn = false, micOn = true;
+let activeMode = 'all';
+let lastIndex = -1, started = false;
+let currentDrill = null;
+let isListening = false;
+let sessionLog = []; // {drill, grade, hitKeywords, missedKeywords}
+
+// ─── SPEECH RECOGNITION ───
+let recognition = null;
+let hasSpeechRecognition = false;
+
+try {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SR) {
+    recognition = new SR();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    recognition.maxAlternatives = 1;
+    hasSpeechRecognition = true;
+  }
+} catch(e) {}
+
+if (!hasSpeechRecognition) {
+  document.getElementById('chromeNote').classList.add('visible');
+}
+
+const promptText = document.getElementById('promptText');
+const typeBadge = document.getElementById('typeBadge');
+const hintText = document.getElementById('hintText');
+const hintContent = document.getElementById('hintContent');
+const idleState = document.getElementById('idleState');
+const activeState = document.getElementById('activeState');
+const flashRing = document.getElementById('flashRing');
+const streakBar = document.getElementById('streakBar');
+const listenZone = document.getElementById('listenZone');
+const listenIndicator = document.getElementById('listenIndicator');
+const listenLabel = document.getElementById('listenLabel');
+const transcriptText = document.getElementById('transcriptText');
+const gradeZone = document.getElementById('gradeZone');
+const gradeBadge = document.getElementById('gradeBadge');
+const gradeDetail = document.getElementById('gradeDetail');
+
+function getPool() {
+  if (activeMode === 'all') return drills;
+  return drills.filter(d => d.type === activeMode);
+}
+
+function speak(text, cb) {
+  if (!voiceOn) { if (cb) cb(); return; }
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 0.92;
+  utter.pitch = 1.05;
+  const voices = window.speechSynthesis.getVoices();
+  const pref = voices.find(v => v.name.includes('Samantha')) ||
+               voices.find(v => v.name.includes('Google US English')) ||
+               voices.find(v => v.lang.startsWith('en') && v.localService);
+  if (pref) utter.voice = pref;
+  utter.onend = () => { if (cb) cb(); };
+  utter.onerror = () => { if (cb) cb(); };
+  window.speechSynthesis.speak(utter);
+}
+
+function startListening() {
+  if (!hasSpeechRecognition || !micOn || !currentDrill) return;
+  isListening = true;
+  transcriptText.textContent = '';
+  listenZone.classList.add('visible');
+  listenIndicator.className = 'listen-indicator listening';
+  listenLabel.textContent = 'Listening...';
+  gradeZone.classList.remove('visible');
+
+  let finalTranscript = '';
+  let silenceTimer = null;
+
+  recognition.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) {
+        finalTranscript += e.results[i][0].transcript;
+      } else {
+        interim += e.results[i][0].transcript;
+      }
+    }
+    transcriptText.textContent = finalTranscript + interim;
+
+    // Reset silence timer
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => {
+      try { recognition.stop(); } catch(e) {}
+    }, 2500);
+  };
+
+  recognition.onend = () => {
+    clearTimeout(silenceTimer);
+    isListening = false;
+    const transcript = (finalTranscript || transcriptText.textContent).trim();
+    if (transcript) {
+      listenIndicator.className = 'listen-indicator processing';
+      listenLabel.textContent = 'Grading...';
+      setTimeout(() => gradeResponse(transcript), 400);
+    } else {
+      listenZone.classList.remove('visible');
+    }
+  };
+
+  recognition.onerror = (e) => {
+    clearTimeout(silenceTimer);
+    isListening = false;
+    if (e.error !== 'no-speech' && e.error !== 'aborted') {
+      listenLabel.textContent = 'Could not hear — try again';
+      setTimeout(() => listenZone.classList.remove('visible'), 1500);
+    } else {
+      listenZone.classList.remove('visible');
+    }
+  };
+
+  try { recognition.start(); } catch(e) {}
+}
+
+function gradeResponse(transcript) {
+  if (!currentDrill) return;
+
+  const words = transcript.toLowerCase();
+  const kw = currentDrill.keywords;
+  const hits = [];
+  const misses = [];
+
+  kw.forEach(k => {
+    if (words.includes(k.toLowerCase())) {
+      hits.push(k);
+    } else {
+      misses.push(k);
+    }
+  });
+
+  const ratio = hits.length / kw.length;
+  let grade, gradeLabel;
+
+  if (ratio >= 0.35) {
+    grade = 'nailed';
+    gradeLabel = 'Nailed It';
+    nailedCt++;
+  } else if (ratio >= 0.15) {
+    grade = 'partial';
+    gradeLabel = 'Partial';
+  } else {
+    grade = 'missed';
+    gradeLabel = 'Missed';
+  }
+
+  document.getElementById('nailedCount').textContent = nailedCt;
+
+  // Update the last log entry
+  const lastLog = sessionLog[sessionLog.length - 1];
+  if (lastLog) {
+    lastLog.grade = grade;
+    lastLog.hits = hits;
+    lastLog.misses = misses;
+    lastLog.transcript = transcript;
+  }
+
+  // Display grade
+  gradeBadge.className = `grade-badge ${grade}`;
+  gradeBadge.textContent = gradeLabel;
+
+  let detailHTML = '';
+  if (hits.length > 0) detailHTML += hits.map(h => `<span class="hit">${h}</span>`).join(' · ');
+  if (hits.length > 0 && misses.length > 0) detailHTML += '  ';
+  if (misses.length > 0) detailHTML += misses.map(m => `<span class="miss">${m}</span>`).join(' · ');
+  gradeDetail.innerHTML = detailHTML;
+
+  gradeZone.classList.add('visible');
+  listenIndicator.className = 'listen-indicator';
+  listenLabel.textContent = 'Done';
+
+  // Show hint after grading
+  if (showHints) {
+    setTimeout(() => hintText.classList.add('visible'), 200);
+  }
+}
+
+function fire() {
+  const pool = getPool();
+  if (pool.length === 0) return;
+
+  // Stop everything
+  window.speechSynthesis.cancel();
+  try { recognition && recognition.abort(); } catch(e) {}
+  isListening = false;
+
+  let idx;
+  do { idx = Math.floor(Math.random() * pool.length); } while (idx === lastIndex && pool.length > 1);
+  lastIndex = idx;
+  currentDrill = pool[idx];
+
+  if (!started) {
+    started = true;
+    idleState.style.display = 'none';
+    activeState.style.display = 'block';
+  }
+
+  totalReps++;
+  if (currentDrill.type === 'smokescreen') smokeCt++; else objCt++;
+  document.getElementById('totalCount').textContent = totalReps;
+  document.getElementById('smokeCount').textContent = smokeCt;
+  document.getElementById('objCount').textContent = objCt;
+
+  streakBar.style.width = Math.min(totalReps * 3, 100) + '%';
+
+  // Flash
+  flashRing.className = 'flash-ring';
+  void flashRing.offsetWidth;
+  flashRing.classList.add(currentDrill.type === 'smokescreen' ? 'smoke-flash' : 'obj-flash', 'fire');
+
+  // Reset zones
+  listenZone.classList.remove('visible');
+  gradeZone.classList.remove('visible');
+  hintText.classList.remove('visible');
+  transcriptText.textContent = '';
+
+  // Badge
+  typeBadge.className = 'type-badge';
+  void typeBadge.offsetWidth;
+  typeBadge.classList.add(currentDrill.type);
+  typeBadge.textContent = currentDrill.type === 'smokescreen' ? 'Smokescreen' : 'Objection';
+  setTimeout(() => typeBadge.classList.add('visible'), 10);
+
+  // Text
+  promptText.className = 'prompt-text';
+  void promptText.offsetWidth;
+  promptText.textContent = `\u201C${currentDrill.text}\u201D`;
+  setTimeout(() => promptText.classList.add('visible'), 10);
+
+  // Hint content (hidden until graded or toggled)
+  hintContent.textContent = currentDrill.hint;
+
+  // Log this rep (grade will be updated later if mic picks it up)
+  const logEntry = { drill: currentDrill, grade: null, hits: [], misses: [], transcript: '' };
+  sessionLog.push(logEntry);
+
+  // TTS then listen
+  setTimeout(() => {
+    speak(currentDrill.text, () => {
+      setTimeout(() => startListening(), 300);
+    });
+    // If voice is off, start listening after short delay
+    if (!voiceOn) setTimeout(() => startListening(), 500);
+  }, 200);
+}
+
+// ─── SESSION SUMMARY ───
+function showSummary() {
+  if (totalReps === 0) return;
+
+  const overlay = document.getElementById('summaryOverlay');
+  const graded = sessionLog.filter(s => s.grade);
+  const nailed = graded.filter(s => s.grade === 'nailed').length;
+  const partial = graded.filter(s => s.grade === 'partial').length;
+  const missed = graded.filter(s => s.grade === 'missed').length;
+  const accuracy = graded.length > 0 ? Math.round((nailed / graded.length) * 100) : 0;
+
+  document.getElementById('summarySubtitle').textContent = `${totalReps} reps completed` + (graded.length < totalReps ? ` · ${graded.length} graded` : '');
+  document.getElementById('sumTotal').textContent = totalReps;
+  document.getElementById('sumNailed').textContent = nailed;
+  document.getElementById('sumAccuracy').textContent = accuracy + '%';
+
+  // Drill list
+  const listEl = document.getElementById('summaryDrillList');
+  listEl.innerHTML = '';
+
+  // Aggregate by drill text
+  const drillMap = {};
+  sessionLog.forEach(s => {
+    const key = s.drill.text;
+    if (!drillMap[key]) drillMap[key] = { drill: s.drill, grades: [] };
+    drillMap[key].grades.push(s.grade);
+  });
+
+  Object.values(drillMap).forEach(entry => {
+    const gradedGrades = entry.grades.filter(g => g !== null);
+    let best, scoreClass, scoreLabel;
+    if (gradedGrades.length === 0) {
+      best = 'ungraded';
+      scoreClass = '';
+      scoreLabel = 'No mic';
+    } else if (gradedGrades.includes('nailed')) {
+      best = 'nailed'; scoreClass = 'score-nailed'; scoreLabel = 'Nailed';
+    } else if (gradedGrades.includes('partial')) {
+      best = 'partial'; scoreClass = 'score-partial'; scoreLabel = 'Partial';
+    } else {
+      best = 'missed'; scoreClass = 'score-missed'; scoreLabel = 'Missed';
+    }
+    const badge = entry.drill.type === 'smokescreen' ? '●' : '▲';
+    const badgeColor = entry.drill.type === 'smokescreen' ? 'var(--smoke)' : 'var(--objection)';
+
+    listEl.innerHTML += `<div class="summary-drill-row">
+      <span style="color:${badgeColor};margin-right:10px;font-size:8px;">${badge}</span>
+      <span class="drill-name">${entry.drill.text}</span>
+      <span class="drill-score ${scoreClass}">${scoreLabel} (${entry.grades.length}x)</span>
+    </div>`;
+  });
+
+  // Weak list
+  const weakDrills = Object.values(drillMap).filter(e => {
+    const gradedGrades = e.grades.filter(g => g !== null);
+    return gradedGrades.length > 0 && !gradedGrades.includes('nailed');
+  });
+  const weakEl = document.getElementById('summaryWeak');
+  const weakList = document.getElementById('summaryWeakList');
+
+  if (weakDrills.length > 0) {
+    weakEl.style.display = 'block';
+    weakList.innerHTML = weakDrills.map(e =>
+      `<div class="summary-weak-item">\u2022 ${e.drill.text}</div>`
+    ).join('');
+  } else {
+    weakEl.style.display = 'none';
+  }
+
+  overlay.classList.add('visible');
+}
+
+function resetSession() {
+  totalReps = 0; smokeCt = 0; objCt = 0; nailedCt = 0;
+  sessionLog = [];
+  started = false;
+  lastIndex = -1;
+  currentDrill = null;
+
+  document.getElementById('totalCount').textContent = '0';
+  document.getElementById('smokeCount').textContent = '0';
+  document.getElementById('objCount').textContent = '0';
+  document.getElementById('nailedCount').textContent = '0';
+  streakBar.style.width = '0%';
+
+  activeState.style.display = 'none';
+  idleState.style.display = 'block';
+  listenZone.classList.remove('visible');
+  gradeZone.classList.remove('visible');
+  hintText.classList.remove('visible');
+
+  document.getElementById('summaryOverlay').classList.remove('visible');
+}
+
+// ─── EVENTS ───
+document.addEventListener('keydown', (e) => {
+  if (document.getElementById('summaryOverlay').classList.contains('visible')) return;
+  if (e.code === 'Space') { e.preventDefault(); fire(); }
+});
+
+document.addEventListener('touchstart', (e) => {
+  if (document.getElementById('summaryOverlay').classList.contains('visible')) return;
+  if (e.target.closest('.mode-btn') || e.target.closest('.ctrl-btn') || e.target.closest('.summary-btn')) return;
+  fire();
+});
+
+// Mode buttons
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.className = 'mode-btn');
+    const mode = btn.dataset.mode;
+    activeMode = mode;
+    if (mode === 'all') btn.classList.add('active-all');
+    else if (mode === 'smokescreen') btn.classList.add('active-smoke');
+    else btn.classList.add('active-obj');
+    lastIndex = -1;
+  });
+});
+
+// Mic toggle
+document.getElementById('toggleMic').addEventListener('click', function() {
+  micOn = !micOn;
+  this.classList.toggle('active', micOn);
+  this.querySelector('span').textContent = micOn ? 'Mic On' : 'Mic Off';
+  if (!micOn) {
+    try { recognition && recognition.abort(); } catch(e) {}
+    listenZone.classList.remove('visible');
+  }
+});
+
+// Voice toggle
+document.getElementById('toggleVoice').addEventListener('click', function() {
+  voiceOn = !voiceOn;
+  this.classList.toggle('active', voiceOn);
+  this.querySelector('span').textContent = voiceOn ? 'Voice On' : 'Voice Off';
+  if (!voiceOn) window.speechSynthesis.cancel();
+});
+
+// Hints toggle
+document.getElementById('toggleHints').addEventListener('click', function() {
+  showHints = !showHints;
+  this.classList.toggle('active', showHints);
+  this.querySelector('span').textContent = showHints ? 'Hints On' : 'Hints Off';
+  if (showHints && started && gradeZone.classList.contains('visible')) {
+    hintText.classList.add('visible');
+  } else if (!showHints) {
+    hintText.classList.remove('visible');
+  }
+});
+
+// End session
+document.getElementById('endSession').addEventListener('click', () => {
+  window.speechSynthesis.cancel();
+  try { recognition && recognition.abort(); } catch(e) {}
+  showSummary();
+});
+
+// Summary buttons
+document.getElementById('closeSummary').addEventListener('click', () => {
+  document.getElementById('summaryOverlay').classList.remove('visible');
+});
+
+document.getElementById('restartSession').addEventListener('click', () => {
+  resetSession();
+});
+
+// Preload voices
+window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+window.speechSynthesis.getVoices();
+</script>
+</body>
+</html>
